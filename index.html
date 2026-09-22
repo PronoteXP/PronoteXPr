@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PronoteXPr — Exporter</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="assets/icons/32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="assets/icons/192.png"
+    />
+    <link rel="apple-touch-icon" sizes="192x192" href="assets/icons/192.png" />
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  </head>
+
+  <body>
+    <div class="mesh"></div>
+    <svg class="grain" xmlns="http://www.w3.org/2000/svg">
+      <filter id="noise">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.9"
+          numOctaves="2"
+          stitchTiles="stitch"
+        ></feTurbulence>
+        <feColorMatrix type="saturate" values="0"></feColorMatrix>
+      </filter>
+      <rect width="100%" height="100%" filter="url(#noise)"></rect>
+    </svg>
+
+    <main class="app-card">
+      <div class="brand">
+        <span class="brand-title">PronoteXPr</span>
+      </div>
+      <div class="subtitle-row">
+        <p class="subtitle">
+          Extraction et sauvegarde locale de vos données PRONOTE
+        </p>
+        <button
+          id="btn-tutorial"
+          type="button"
+          class="tutorial-trigger"
+          onclick="openTutorialModal()"
+        >
+          Tutoriel QR Code
+        </button>
+      </div>
+
+      <div class="tab-bar" role="tablist">
+        <button
+          id="btn-tab-qr"
+          role="tab"
+          aria-selected="true"
+          onclick="setTab('qr')"
+          class="tab-button active"
+        >
+          QR Code
+          <span class="recommended-pin">Recommandé</span>
+        </button>
+        <button
+          id="btn-tab-token"
+          role="tab"
+          aria-selected="false"
+          onclick="setTab('token')"
+          class="tab-button"
+        >
+          Jeton / URL
+        </button>
+        <button
+          id="btn-tab-cred"
+          role="tab"
+          aria-selected="false"
+          onclick="setTab('cred')"
+          class="tab-button"
+        >
+          Identifiants
+        </button>
+      </div>
+
+      <div id="section-qr" class="section">
+        <div class="field">
+          <label for="qr-file">Fichier QR Code</label>
+          <input
+            type="file"
+            id="qr-file"
+            accept="image/*"
+            onchange="readQRCodeImage(this)"
+          />
+        </div>
+        <div class="field">
+          <label for="qr-pin">Code PIN (4 chiffres)</label>
+          <input
+            type="password"
+            id="qr-pin"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="4"
+            autocomplete="off"
+            placeholder="••••"
+          />
+        </div>
+      </div>
+
+      <div id="section-token" class="section hidden">
+        <div class="field">
+          <label for="token-url">URL PRONOTE</label>
+          <input
+            type="url"
+            id="token-url"
+            placeholder="https://URL.index-education.net/pronote/eleve.html"
+          />
+        </div>
+        <div class="field">
+          <label for="token-user">Identifiant Unique</label>
+          <input
+            type="text"
+            id="token-user"
+            autocomplete="off"
+            placeholder="prenom.nom"
+          />
+        </div>
+        <div class="field">
+          <label for="token-val">Jeton / Jeton de session</label>
+          <input
+            type="password"
+            id="token-val"
+            autocomplete="off"
+            placeholder="Entrez le token PRONOTE"
+          />
+        </div>
+      </div>
+
+      <div id="section-cred" class="section hidden">
+        <div class="field">
+          <label for="cred-url">URL PRONOTE</label>
+          <input
+            type="url"
+            id="cred-url"
+            placeholder="https://URL.index-education.net/pronote/eleve.html"
+          />
+        </div>
+        <div class="field">
+          <label for="cred-ent">ENT</label>
+          <select id="cred-ent">
+            <option value="monlycee_net">
+              MonLycée.net (Île-de-France / Yvelines)
+            </option>
+            <option value="ac_versailles">Académie de Versailles</option>
+            <option value="open_ent_ng">Open ENT NG</option>
+            <option value="">PRONOTE Direct (Sans ENT)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cred-user">Identifiant</label>
+          <input
+            type="text"
+            id="cred-user"
+            autocomplete="off"
+            placeholder="prenom.nom"
+          />
+        </div>
+        <div class="field">
+          <label for="cred-pass">Mot de passe</label>
+          <input
+            type="password"
+            id="cred-pass"
+            autocomplete="off"
+            placeholder="••••••••"
+          />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btn-export" onclick="startExport()" class="btn primary">
+          Exporter les données
+        </button>
+      </div>
+
+      <section
+        id="export-options"
+        class="export-options hidden"
+        aria-labelledby="export-options-title"
+      >
+        <div class="options-heading">
+          <div>
+            <h2 id="export-options-title">Contenu de l’export</h2>
+            <p>
+              Choisissez les données à mettre dans Excel et dans les fichiers
+              JSON.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="text-button"
+            onclick="toggleAllCategories()"
+          >
+            Tout cocher
+          </button>
+        </div>
+        <details class="category-menu">
+          <summary>
+            Catégories sélectionnées
+            <span class="summary-hint">8 catégories</span>
+          </summary>
+          <div class="category-list">
+            <label
+              class="check-item"
+              data-category="periods"
+              data-scope="Évaluations"
+            >
+              <input type="checkbox" value="periods" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Notes et moyennes</strong
+                ><small>Résultats, coefficients et bilans</small></span
+              >
+              <span class="category-badge">Évaluations</span>
+            </label>
+            <label
+              class="check-item"
+              data-category="timetable"
+              data-scope="Organisation"
+            >
+              <input type="checkbox" value="timetable" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Emploi du temps</strong
+                ><small>Cours, salles et professeurs</small></span
+              >
+              <span class="category-badge">Organisation</span>
+            </label>
+            <label
+              class="check-item"
+              data-category="homework"
+              data-scope="Travail"
+            >
+              <input type="checkbox" value="homework" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Devoirs</strong
+                ><small>À faire, dates et matières</small></span
+              >
+              <span class="category-badge">Travail</span>
+            </label>
+            <label
+              class="check-item"
+              data-category="absences"
+              data-scope="Vie scolaire"
+            >
+              <input type="checkbox" value="absences" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Absences</strong
+                ><small>Justifiées et non justifiées</small></span
+              >
+              <span class="category-badge">Vie scolaire</span>
+            </label>
+            <label
+              class="check-item"
+              data-category="delays"
+              data-scope="Vie scolaire"
+            >
+              <input type="checkbox" value="delays" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Retards</strong
+                ><small>Horaires et motifs enregistrés</small></span
+              >
+              <span class="category-badge">Vie scolaire</span>
+            </label>
+            <label
+              class="check-item"
+              data-category="punishments"
+              data-scope="Suivi"
+            >
+              <input type="checkbox" value="punishments" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Punitions</strong
+                ><small>Suivi des sanctions et observations</small></span
+              >
+              <span class="category-badge">Suivi</span>
+            </label>
+            <label
+              class="check-item"
+              data-category="news"
+              data-scope="Communication"
+            >
+              <input type="checkbox" value="news" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Actualités</strong
+                ><small>Messages de l’établissement</small></span
+              >
+              <span class="category-badge">Info</span>
+            </label>
+            <label
+              class="check-item"
+              data-category="menus"
+              data-scope="Services"
+            >
+              <input type="checkbox" value="menus" checked />
+              <span class="check-mark" aria-hidden="true"></span>
+              <span class="category-copy"
+                ><strong>Menus</strong
+                ><small>Repas proposés à la cantine</small></span
+              >
+              <span class="category-badge">Services</span>
+            </label>
+          </div>
+        </details>
+        <label class="split-option">
+          <input type="checkbox" id="split-files" />
+          <span
+            ><strong>Enregistrer les catégories séparément</strong
+            ><small
+              >Les catégories cochées seront retirées du JSON principal et
+              téléchargées dans des fichiers individuels.</small
+            ></span
+          >
+        </label>
+        <div class="download-actions">
+          <button
+            id="btn-download-json"
+            type="button"
+            onclick="downloadPreparedJson()"
+            class="btn success"
+          >
+            Télécharger le JSON
+          </button>
+          <button
+            id="btn-download-table"
+            type="button"
+            onclick="openTableModal()"
+            class="btn excel"
+          >
+            Télécharger le tableau
+          </button>
+        </div>
+        <p id="download-hint">
+          Le tableau contient une feuille par catégorie. Le mode séparé crée un
+          fichier par catégorie.
+        </p>
+      </section>
+
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+
+    <div
+      id="tutorial-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tutorial-modal-title"
+    >
+      <div class="modal-backdrop" onclick="closeTutorialModal()"></div>
+      <div class="modal-panel tutorial-panel">
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Fermer le tutoriel"
+          onclick="closeTutorialModal()"
+        ></button>
+        <div class="tutorial-heading">
+          <div>
+            <p class="modal-kicker">Tutoriel pas à pas</p>
+            <h2 id="tutorial-modal-title">Tutoriel</h2>
+          </div>
+          <span id="tutorial-step-count" class="tutorial-step-count"></span>
+        </div>
+        <div class="tutorial-media">
+          <img
+            id="tutorial-step-image"
+            src="assets/tutorial/qr-code/qr-btn.png"
+            alt="Illustration de l’étape du tutoriel"
+          />
+        </div>
+        <div class="tutorial-copy">
+          <h3 id="tutorial-step-title">Étape 1</h3>
+          <p id="tutorial-step-text"></p>
+        </div>
+        <div class="tutorial-navigation" aria-label="Navigation du tutoriel">
+          <button
+            id="tutorial-previous"
+            type="button"
+            class="tutorial-arrow"
+            aria-label="Étape précédente"
+            onclick="moveTutorialStep(-1)"
+          >
+            ←
+          </button>
+          <button
+            id="tutorial-next"
+            type="button"
+            class="btn primary tutorial-next"
+            onclick="moveTutorialStep(1)"
+          >
+            Suivant
+          </button>
+          <button
+            id="tutorial-forward"
+            type="button"
+            class="tutorial-arrow"
+            aria-label="Étape suivante"
+            onclick="moveTutorialStep(1)"
+          >
+            →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="table-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="table-modal-title"
+    >
+      <div class="modal-backdrop" onclick="closeTableModal()"></div>
+      <div class="modal-panel">
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Fermer"
+          onclick="closeTableModal()"
+        ></button>
+        <p class="modal-kicker">Format du tableau</p>
+        <h2 id="table-modal-title">
+          Dans quel format souhaitez-vous enregistrer le tableau?
+        </h2>
+        <p class="modal-copy">
+          Le fichier sera organisé en feuilles et pourra être ouvert avec le
+          logiciel choisi.
+        </p>
+        <label class="modal-field" for="table-format">Format du fichier</label>
+        <select id="table-format">
+          <option value="xlsx">Excel (.xlsx)</option>
+          <option value="ods">LibreOffice (.ods)</option>
+        </select>
+        <label class="table-color-option">
+          <input id="color-tables" type="checkbox" checked />
+          <span>
+            <strong>Ajouter de la couleur</strong>
+            <small
+              >Le tableau sera coloré en fonction de la catégorie,
+              matières...</small
+            >
+          </span>
+        </label>
+        <button
+          id="modal-download-table"
+          type="button"
+          onclick="downloadTableFiles()"
+          class="btn excel"
+        >
+          Télécharger le tableau
+        </button>
+      </div>
+    </div>
+  </body>
+  <script src="tutorial.js"></script>
+  <script src="script.js"></script>
+  <script src="export.js"></script>
+</html>
