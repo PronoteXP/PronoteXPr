@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = "https://pronotexp-api.onrender.com";
+const DEFAULT_API_URL = "https://pronotexp-api-ou5w.onrender.com";
 const API_BASE_URL = (window.PRONOTEXP_API_URL || DEFAULT_API_URL).replace(/\/$/, "");
 
 // UI state: track the active tab and cached QR payload processed from the uploaded image.
